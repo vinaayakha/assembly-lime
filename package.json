@@ -1,15 +1,14 @@
 {
-  "name": "assemblyLime",
-  "version": "1.0.50",
+  "name": "assembly-lime",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run --watch src/index.ts"
-  },
-  "dependencies": {
-    "elysia": "latest"
+    "dev": "bun run --filter '@assembly-lime/api' dev",
+    "dev:web": "bun run --filter '@assembly-lime/web' dev",
+    "dev:all": "bun run --filter '*' dev"
   },
   "devDependencies": {
     "bun-types": "latest"
-  },
-  "module": "src/index.js"
+  }
 }
