@@ -1,4 +1,19 @@
+import { useSearchParams } from "react-router-dom";
+
+const ERROR_MESSAGES: Record<string, string> = {
+  access_denied: "You denied access to your GitHub account.",
+  invalid_state: "Login session expired. Please try again.",
+  missing_code: "Missing authorization code. Please try again.",
+  auth_failed: "Authentication failed. Please try again.",
+};
+
 export function LoginPage() {
+  const [params] = useSearchParams();
+  const error = params.get("error");
+  const errorMessage = error
+    ? ERROR_MESSAGES[error] ?? "Something went wrong. Please try again."
+    : null;
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-950">
       <div className="w-full max-w-sm rounded-xl border border-zinc-800 bg-zinc-900 p-8">
@@ -13,6 +28,12 @@ export function LoginPage() {
             Sign in to access the software factory
           </p>
         </div>
+
+        {errorMessage && (
+          <div className="mb-4 rounded-lg border border-red-800/50 bg-red-900/20 px-4 py-3 text-sm text-red-300">
+            {errorMessage}
+          </div>
+        )}
 
         <a
           href="/api/auth/github"

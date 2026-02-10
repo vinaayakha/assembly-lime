@@ -94,6 +94,36 @@ export function BoardPage() {
       .catch((err) => console.error("Failed to update ticket:", err));
   }
 
+  async function handleAddTicket(columnKey: ColumnKey, title: string) {
+    if (!projectId) return;
+    try {
+      const ticket = await api.post<{
+        id: string;
+        title: string;
+        description: string;
+        column: string;
+        priority: string;
+        labels: string[];
+      }>(`/projects/${projectId}/tickets`, {
+        title,
+        columnKey,
+      });
+      dispatch({
+        type: "ADD_TICKET",
+        ticket: {
+          id: ticket.id,
+          title: ticket.title,
+          description: ticket.description,
+          column: ticket.column as ColumnKey,
+          priority: ticket.priority as Ticket["priority"],
+          labels: ticket.labels,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to create ticket:", err);
+    }
+  }
+
   function openDrawer(ticket: Ticket) {
     setDrawerTicket(ticket);
     setDrawerOpen(true);
@@ -121,6 +151,7 @@ export function BoardPage() {
               columnKey={key}
               tickets={ticketsByColumn[key]}
               onCardClick={openDrawer}
+              onAddTicket={handleAddTicket}
             />
           ))}
         </div>

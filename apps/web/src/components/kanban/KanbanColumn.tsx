@@ -1,8 +1,10 @@
+import { useState, useRef, useEffect } from "react";
 import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useDroppable } from "@dnd-kit/core";
+import { Plus, X } from "lucide-react";
 import type { Ticket, ColumnKey } from "../../types";
 import { COLUMNS } from "../../types";
 import { KanbanCard } from "./KanbanCard";
@@ -11,13 +13,30 @@ export function KanbanColumn({
   columnKey,
   tickets,
   onCardClick,
+  onAddTicket,
 }: {
   columnKey: ColumnKey;
   tickets: Ticket[];
   onCardClick: (ticket: Ticket) => void;
+  onAddTicket?: (columnKey: ColumnKey, title: string) => void;
 }) {
   const column = COLUMNS[columnKey];
   const { setNodeRef } = useDroppable({ id: columnKey });
+  const [adding, setAdding] = useState(false);
+  const [title, setTitle] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (adding) inputRef.current?.focus();
+  }, [adding]);
+
+  function handleSubmit() {
+    const trimmed = title.trim();
+    if (!trimmed || !onAddTicket) return;
+    onAddTicket(columnKey, trimmed);
+    setTitle("");
+    setAdding(false);
+  }
 
   return (
     <div className="flex w-72 shrink-0 flex-col">
@@ -27,6 +46,14 @@ export function KanbanColumn({
           {column.label}
         </span>
         <span className="ml-auto text-xs text-zinc-500">{tickets.length}</span>
+        {onAddTicket && (
+          <button
+            onClick={() => setAdding(true)}
+            className="rounded p-0.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       <SortableContext
@@ -44,6 +71,42 @@ export function KanbanColumn({
               onClick={() => onCardClick(ticket)}
             />
           ))}
+
+          {adding && (
+            <div className="rounded-lg border border-zinc-700 bg-zinc-800 p-2">
+              <input
+                ref={inputRef}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSubmit();
+                  if (e.key === "Escape") {
+                    setAdding(false);
+                    setTitle("");
+                  }
+                }}
+                placeholder="Ticket title..."
+                className="w-full rounded bg-zinc-900 px-2 py-1.5 text-sm text-zinc-200 placeholder-zinc-500 outline-none focus:ring-1 focus:ring-emerald-500/50"
+              />
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  onClick={handleSubmit}
+                  className="rounded bg-emerald-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-emerald-500"
+                >
+                  Add
+                </button>
+                <button
+                  onClick={() => {
+                    setAdding(false);
+                    setTitle("");
+                  }}
+                  className="rounded p-1 text-zinc-500 transition-colors hover:text-zinc-300"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </SortableContext>
     </div>

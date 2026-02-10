@@ -130,15 +130,13 @@ export async function getCurrentUser(
 
   const userRoleRows = await db.query.userRoles.findMany({
     where: (ur, { eq }) => eq(ur.userId, userId),
-    with: { role: true } as never,
   });
 
-  // Fallback: query roles directly if `with` didn't work
-  const roleIds = userRoleRows.map((ur: any) => ur.roleId);
+  const roleIds = userRoleRows.map((ur) => ur.roleId);
   let roleNames: string[] = [];
   if (roleIds.length > 0) {
     const allRoles = await db.query.roles.findMany({
-      where: (r, { and, eq: eqOp }) => and(eqOp(r.tenantId, tenantId)),
+      where: (r, { eq: eqOp }) => eqOp(r.tenantId, tenantId),
     });
     roleNames = allRoles
       .filter((r) => roleIds.includes(r.id))

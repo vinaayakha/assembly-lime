@@ -1,11 +1,13 @@
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID ?? "";
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET ?? "";
-const APP_URL = process.env.APP_URL ?? "http://localhost:5173";
+const API_URL = process.env.API_URL ?? "http://localhost:3434";
+
+export const FRONTEND_URL = process.env.APP_URL ?? "http://localhost:5173";
 
 export function getGitHubAuthUrl(state: string): string {
   const params = new URLSearchParams({
     client_id: GITHUB_CLIENT_ID,
-    redirect_uri: `${APP_URL}/api/auth/github/callback`,
+    redirect_uri: `${API_URL}/auth/github/callback`,
     scope: "read:user user:email",
     state,
   });

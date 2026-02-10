@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
-import { Terminal, LayoutDashboard, Play } from "lucide-react";
+import { Terminal, LayoutDashboard, Play, ChevronsUpDown } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../hooks/useAuth";
 
 const NAV_ITEMS = [
@@ -10,14 +11,27 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const auth = useAuth();
+  const [projectMenuOpen, setProjectMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const tenantName =
     auth.status === "authenticated" ? auth.tenant.name : "...";
-  const projectName =
+  const projects =
+    auth.status === "authenticated" ? auth.projects : [];
+  const currentProject =
     auth.status === "authenticated"
-      ? (auth.projects.find((p) => p.id === auth.currentProjectId)?.name ??
-        "No project")
-      : "...";
+      ? projects.find((p) => p.id === auth.currentProjectId)
+      : null;
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setProjectMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <aside className="flex h-full w-56 flex-col bg-zinc-900 border-r border-zinc-800">
@@ -49,10 +63,45 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-zinc-800 px-4 py-3">
-        <p className="text-xs text-zinc-500">
-          {tenantName} / {projectName}
+      <div className="border-t border-zinc-800 px-3 py-3 relative" ref={menuRef}>
+        <p className="text-[10px] uppercase tracking-wider text-zinc-600 mb-1 px-1">
+          {tenantName}
         </p>
+        <button
+          onClick={() => setProjectMenuOpen(!projectMenuOpen)}
+          className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm text-zinc-300 transition-colors hover:bg-zinc-800"
+        >
+          <span className="truncate">
+            {currentProject?.name ?? "No project"}
+          </span>
+          <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
+        </button>
+
+        {projectMenuOpen && projects.length > 1 && (
+          <div className="absolute bottom-full left-3 right-3 mb-1 rounded-lg border border-zinc-700 bg-zinc-800 py-1 shadow-xl z-50">
+            {projects.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => {
+                  if (auth.status === "authenticated") {
+                    auth.setCurrentProjectId(p.id);
+                  }
+                  setProjectMenuOpen(false);
+                }}
+                className={`flex w-full items-center gap-2 px-3 py-1.5 text-sm transition-colors hover:bg-zinc-700 ${
+                  p.id === currentProject?.id
+                    ? "text-emerald-400"
+                    : "text-zinc-300"
+                }`}
+              >
+                <span className="font-mono text-xs text-zinc-500">
+                  {p.key}
+                </span>
+                <span className="truncate">{p.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </aside>
   );
