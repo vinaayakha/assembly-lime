@@ -1,5 +1,8 @@
 import Elysia from "elysia";
 import { SESSION_COOKIE_NAME, getSession } from "../lib/session";
+import { childLogger } from "../lib/logger";
+
+const log = childLogger({ module: "auth-middleware" });
 
 export type AuthContext = { userId: number; tenantId: number };
 
@@ -24,6 +27,7 @@ export const requireAuth = new Elysia({ name: "require-auth" })
   .derive({ as: "scoped" }, async ({ request, set }): Promise<{ auth: AuthContext }> => {
     const auth = await resolveAuth(request);
     if (!auth) {
+      log.warn({ path: new URL(request.url).pathname }, "unauthorized request");
       set.status = 401;
       throw new Error("Unauthorized");
     }

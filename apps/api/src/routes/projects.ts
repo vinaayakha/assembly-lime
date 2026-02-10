@@ -8,6 +8,9 @@ import {
   getBoard,
   createTicket,
 } from "../services/project.service";
+import { childLogger } from "../lib/logger";
+
+const log = childLogger({ module: "project-routes" });
 
 export function projectRoutes(db: Db) {
   return new Elysia({ prefix: "/projects" })
@@ -15,6 +18,7 @@ export function projectRoutes(db: Db) {
 
     .get("/", async ({ auth }) => {
       const rows = await listProjects(db, auth!.tenantId);
+      log.debug({ tenantId: auth!.tenantId, count: rows.length }, "listed projects");
       return rows.map((p) => ({
         id: String(p.id),
         name: p.name,
@@ -27,6 +31,7 @@ export function projectRoutes(db: Db) {
       "/",
       async ({ auth, body }) => {
         const project = await createProject(db, auth!.tenantId, body);
+        log.info({ tenantId: auth!.tenantId, projectId: project.id, name: body.name, key: body.key }, "created project");
         return {
           id: String(project.id),
           name: project.name,
@@ -50,7 +55,10 @@ export function projectRoutes(db: Db) {
           auth!.tenantId,
           Number(params.id),
         );
-        if (!project) return { error: "not found" };
+        if (!project) {
+          log.warn({ tenantId: auth!.tenantId, projectId: params.id }, "project not found");
+          return { error: "not found" };
+        }
         return {
           id: String(project.id),
           name: project.name,
@@ -69,7 +77,11 @@ export function projectRoutes(db: Db) {
           auth!.tenantId,
           Number(params.id),
         );
-        if (!result) return { error: "no board found" };
+        if (!result) {
+          log.warn({ tenantId: auth!.tenantId, projectId: params.id }, "board not found");
+          return { error: "no board found" };
+        }
+        log.debug({ tenantId: auth!.tenantId, projectId: params.id, ticketCount: result.tickets.length }, "fetched board");
         return result;
       },
       { params: t.Object({ id: t.String() }) },
@@ -78,13 +90,15 @@ export function projectRoutes(db: Db) {
     .post(
       "/:id/tickets",
       async ({ auth, params, body }) => {
-        return createTicket(
+        const ticket = await createTicket(
           db,
           auth!.tenantId,
           Number(params.id),
           body,
           auth!.userId,
         );
+        log.info({ tenantId: auth!.tenantId, projectId: params.id, ticketId: ticket.id, title: body.title }, "created ticket");
+        return ticket;
       },
       {
         params: t.Object({ id: t.String() }),

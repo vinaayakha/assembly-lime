@@ -2,6 +2,9 @@ import { Elysia, t } from "elysia";
 import type { Db } from "@assembly-lime/shared/db";
 import { requireAuth } from "../middleware/auth";
 import { getTicket, updateTicket } from "../services/project.service";
+import { childLogger } from "../lib/logger";
+
+const log = childLogger({ module: "ticket-routes" });
 
 export function ticketRoutes(db: Db) {
   return new Elysia({ prefix: "/tickets" })
@@ -15,7 +18,10 @@ export function ticketRoutes(db: Db) {
           auth!.tenantId,
           Number(params.id),
         );
-        if (!ticket) return { error: "not found" };
+        if (!ticket) {
+          log.warn({ tenantId: auth!.tenantId, ticketId: params.id }, "ticket not found");
+          return { error: "not found" };
+        }
         return ticket;
       },
       { params: t.Object({ id: t.String() }) },
@@ -30,7 +36,11 @@ export function ticketRoutes(db: Db) {
           Number(params.id),
           body,
         );
-        if (!ticket) return { error: "not found" };
+        if (!ticket) {
+          log.warn({ tenantId: auth!.tenantId, ticketId: params.id }, "ticket not found for update");
+          return { error: "not found" };
+        }
+        log.info({ tenantId: auth!.tenantId, ticketId: params.id, fields: Object.keys(body) }, "updated ticket");
         return ticket;
       },
       {

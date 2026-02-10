@@ -4,6 +4,9 @@ import type { Db } from "@assembly-lime/shared/db";
 import { agentEvents } from "@assembly-lime/shared/db/schema";
 import { requireAuth } from "../middleware/auth";
 import { createAgentRun, getAgentRun } from "../services/agent-run.service";
+import { childLogger } from "../lib/logger";
+
+const log = childLogger({ module: "agent-run-routes" });
 
 export function agentRunRoutes(db: Db) {
   return new Elysia({ prefix: "/agent-runs" })
@@ -11,6 +14,7 @@ export function agentRunRoutes(db: Db) {
     .post(
       "/",
       async ({ auth, body }) => {
+        log.info({ tenantId: auth!.tenantId, provider: body.provider, mode: body.mode, projectId: body.projectId }, "creating agent run");
         const run = await createAgentRun(db, {
           tenantId: auth!.tenantId,
           projectId: body.projectId,
@@ -21,6 +25,7 @@ export function agentRunRoutes(db: Db) {
           repo: body.repo,
           constraints: body.constraints,
         });
+        log.info({ runId: run.id, provider: body.provider, mode: body.mode }, "agent run created");
         return {
           id: String(run.id),
           status: run.status,

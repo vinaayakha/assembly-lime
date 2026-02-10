@@ -5,6 +5,9 @@ import {
   boards,
   tickets,
 } from "@assembly-lime/shared/db/schema";
+import { childLogger } from "../lib/logger";
+
+const log = childLogger({ module: "project-service" });
 
 const DEFAULT_COLUMNS = [
   { key: "backlog", label: "Backlog" },
@@ -47,6 +50,7 @@ export async function createProject(
     columnsJson: DEFAULT_COLUMNS,
   });
 
+  log.info({ tenantId, projectId: project!.id, name: input.name, key: input.key }, "created project with default board");
   return project!;
 }
 
@@ -95,7 +99,10 @@ export async function createTicket(
       and(eq(b.tenantId, tenantId), eq(b.projectId, projectId)),
   });
 
-  if (!board) throw new Error("No board found for this project");
+  if (!board) {
+    log.error({ tenantId, projectId }, "no board found for project when creating ticket");
+    throw new Error("No board found for this project");
+  }
 
   const [ticket] = await db
     .insert(tickets)
@@ -112,6 +119,7 @@ export async function createTicket(
     })
     .returning();
 
+  log.info({ tenantId, projectId, ticketId: ticket!.id, title: input.title, column: input.columnKey ?? "backlog" }, "created ticket");
   return formatTicket(ticket!);
 }
 
@@ -149,6 +157,7 @@ export async function updateTicket(
     .returning();
 
   if (!ticket) return null;
+  log.debug({ tenantId, ticketId, fields: Object.keys(partial) }, "updated ticket");
   return formatTicket(ticket);
 }
 

@@ -9,6 +9,9 @@ import {
   boards,
 } from "@assembly-lime/shared/db/schema";
 import type { GitHubUser } from "../lib/github-oauth";
+import { childLogger } from "../lib/logger";
+
+const log = childLogger({ module: "auth-service" });
 
 const DEFAULT_COLUMNS = [
   { key: "backlog", label: "Backlog" },
@@ -31,7 +34,7 @@ export async function findOrCreateUserFromGitHub(
   });
 
   if (existing) {
-    // Update avatar/name
+    log.info({ userId: existing.id, githubLogin: ghUser.login }, "existing user found, updating profile");
     await db
       .update(users)
       .set({
@@ -45,6 +48,7 @@ export async function findOrCreateUserFromGitHub(
   }
 
   // 2. Create tenant
+  log.info({ githubLogin: ghUser.login }, "creating new tenant and user for first-time login");
   const [tenant] = await db
     .insert(tenants)
     .values({ name: ghUser.login, slug: ghUser.login.toLowerCase() })
@@ -66,6 +70,7 @@ export async function findOrCreateUserFromGitHub(
     .returning();
 
   const userId = user!.id;
+  log.info({ userId, tenantId, githubLogin: ghUser.login }, "created tenant and user");
 
   // 4. Seed roles + assign admin
   const insertedRoles = await db

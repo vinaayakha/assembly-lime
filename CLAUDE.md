@@ -154,12 +154,18 @@ ENCRYPTION_MASTER_KEY=...
 
 ## Development
 
+The app is called **assemblyLime**. The user runs all services themselves — do NOT attempt to start, stop, restart, or check running processes. Do NOT run `bun dev`, `bun dev:all`, `lsof`, `ps`, or any process inspection commands. Assume the API, web frontend, and workers are already running when the user is testing.
+
 ```bash
 bun install          # Install dependencies
-bun dev              # Start dev server (currently apps/api on port 3434)
-docker compose up    # Start Postgres + Redis
-bun db:migrate       # Run Drizzle migrations (once set up)
+bun dev:all          # Start all services (API + web + workers)
+bun db:push          # Apply schema changes (db:migrate has permission issues on managed DB)
+bun db:seed          # Seed dev data
 ```
+
+**Ports:**
+- `3434` — API (Bun + Elysia)
+- `5173` — Frontend (Vite dev server, proxies `/api` → `:3434`)
 
 ## Reference Documents
 

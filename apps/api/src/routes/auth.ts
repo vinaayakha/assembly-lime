@@ -14,6 +14,9 @@ import {
 } from "../lib/session";
 import { findOrCreateUserFromGitHub } from "../services/auth.service";
 import { optionalAuth } from "../middleware/auth";
+import { childLogger } from "../lib/logger";
+
+const log = childLogger({ module: "auth-routes" });
 
 function generateState(): string {
   const bytes = new Uint8Array(16);
@@ -46,6 +49,7 @@ export function authRoutes(db: Db) {
   return new Elysia({ prefix: "/auth" })
     .get("/github", ({ set }) => {
       const state = generateState();
+      log.info("initiating GitHub OAuth flow");
       const stateCookie = `al_oauth_state=${state}; Path=/; HttpOnly; SameSite=Lax; Max-Age=600`;
       redirect(set, getGitHubAuthUrl(state), { "Set-Cookie": stateCookie });
     })
@@ -59,6 +63,7 @@ export function authRoutes(db: Db) {
 
         // GitHub may redirect with an error (e.g. user denied access)
         if (error) {
+          log.warn({ error }, "GitHub OAuth returned error");
           redirect(set, `${FRONTEND_URL}/login?error=${encodeURIComponent(error)}`);
           return;
         }
@@ -67,24 +72,29 @@ export function authRoutes(db: Db) {
         const cookieHeader = request.headers.get("cookie");
         const savedState = parseCookie(cookieHeader, "al_oauth_state");
         if (!state || !savedState || state !== savedState) {
+          log.warn("OAuth state mismatch");
           redirect(set, `${FRONTEND_URL}/login?error=invalid_state`);
           return;
         }
 
         if (!code) {
+          log.warn("OAuth callback missing code");
           redirect(set, `${FRONTEND_URL}/login?error=missing_code`);
           return;
         }
 
         // Exchange code for token + fetch user
+        log.info("exchanging OAuth code for token");
         const accessToken = await exchangeCodeForToken(code);
         const ghUser = await fetchGitHubUser(accessToken);
+        log.info({ githubLogin: ghUser.login, githubId: ghUser.id }, "fetched GitHub user");
 
         // Find or create user
         const { userId, tenantId } = await findOrCreateUserFromGitHub(
           db,
           ghUser,
         );
+        log.info({ userId, tenantId, githubLogin: ghUser.login }, "user authenticated");
 
         // Create session
         const sessionToken = await createSession({ userId, tenantId });
@@ -101,7 +111,7 @@ export function authRoutes(db: Db) {
           ],
         });
       } catch (err) {
-        console.error("OAuth callback error:", err);
+        log.error({ err }, "OAuth callback error");
         redirect(set, `${FRONTEND_URL}/login?error=auth_failed`);
       }
     })
@@ -112,6 +122,7 @@ export function authRoutes(db: Db) {
       const token = parseCookie(cookieHeader, SESSION_COOKIE_NAME);
       if (token) {
         await deleteSession(token);
+        log.info("user logged out, session deleted");
       }
       set.headers["Set-Cookie"] = buildCookieHeader(undefined, true);
       return { ok: true };

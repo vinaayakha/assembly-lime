@@ -5,12 +5,16 @@ import {
   destroyPreviewDeployment,
   listPreviewDeployments,
 } from "../services/preview-deploy.service";
+import { childLogger } from "../lib/logger";
+
+const log = childLogger({ module: "preview-deploy-routes" });
 
 export function previewDeploymentRoutes(db: Db) {
   return new Elysia({ prefix: "/preview-deployments" })
     .post(
       "/",
       async ({ body }) => {
+        log.info({ tenantId: body.tenantId, branch: body.branch, repositoryId: body.repositoryId }, "creating preview deployment");
         const row = await createPreviewDeployment(db, {
           tenantId: body.tenantId,
           agentRunId: body.agentRunId,
@@ -19,6 +23,7 @@ export function previewDeploymentRoutes(db: Db) {
           featureSlug: body.featureSlug,
           appImage: body.appImage,
         });
+        log.info({ deploymentId: row.id, previewUrl: row.previewUrl }, "preview deployment created");
         return {
           id: String(row.id),
           previewUrl: row.previewUrl,
@@ -60,7 +65,11 @@ export function previewDeploymentRoutes(db: Db) {
       async ({ params, query }) => {
         const tenantId = Number(query.tenantId);
         const result = await destroyPreviewDeployment(db, tenantId, Number(params.id));
-        if (!result) return { error: "not found" };
+        if (!result) {
+          log.warn({ tenantId, deploymentId: params.id }, "preview deployment not found for destroy");
+          return { error: "not found" };
+        }
+        log.info({ tenantId, deploymentId: params.id, status: result.status }, "preview deployment destroyed");
         return { id: String(result.id), status: result.status };
       },
       {

@@ -1,6 +1,9 @@
 import { Elysia, t } from "elysia";
 import type { Db } from "@assembly-lime/shared/db";
 import { uploadImage, getImage, deleteImage } from "../services/image.service";
+import { childLogger } from "../lib/logger";
+
+const log = childLogger({ module: "image-routes" });
 
 export function imageRoutes(db: Db) {
   return new Elysia({ prefix: "/images" })
@@ -10,6 +13,7 @@ export function imageRoutes(db: Db) {
         const file = body.file;
         const bytes = new Uint8Array(await file.arrayBuffer());
 
+        log.info({ tenantId: body.tenantId, fileName: file.name, sizeBytes: bytes.length }, "uploading image");
         const result = await uploadImage(db, {
           tenantId: body.tenantId,
           agentRunId: body.agentRunId,
@@ -20,6 +24,7 @@ export function imageRoutes(db: Db) {
           purpose: body.purpose,
         });
 
+        log.info({ imageId: result.id, fileName: result.fileName }, "image uploaded");
         return {
           id: String(result.id),
           fileName: result.fileName,
@@ -64,6 +69,7 @@ export function imageRoutes(db: Db) {
       async ({ params, query }) => {
         const tenantId = Number(query.tenantId);
         const ok = await deleteImage(db, tenantId, Number(params.id));
+        log.info({ tenantId, imageId: params.id, deleted: ok }, "delete image");
         return { deleted: ok };
       },
       {

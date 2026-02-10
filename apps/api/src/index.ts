@@ -20,6 +20,17 @@ if (redisSub.status === "wait") await redisSub.connect();
 await startEventSubscriber(db, broadcastToWs);
 
 const app = new Elysia()
+  .onRequest(({ request }) => {
+    const url = new URL(request.url);
+    if (url.pathname !== "/health") {
+      logger.info({ method: request.method, path: url.pathname }, "incoming request");
+    }
+  })
+  .onError(({ request, error }) => {
+    const url = new URL(request.url);
+    const msg = "message" in error ? error.message : String(error);
+    logger.error({ method: request.method, path: url.pathname, err: msg }, "request error");
+  })
   .get("/health", () => ({ ok: true }))
   .use(authRoutes(db))
   .use(meRoutes(db))
