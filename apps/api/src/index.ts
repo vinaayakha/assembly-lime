@@ -9,6 +9,13 @@ import { ticketRoutes } from "./routes/tickets";
 import { agentRunRoutes } from "./routes/agent-runs";
 import { imageRoutes } from "./routes/images";
 import { previewDeploymentRoutes } from "./routes/preview-deployments";
+import { connectorRoutes } from "./routes/connectors";
+import { repositoryRoutes } from "./routes/repositories";
+import { projectRepoRoutes } from "./routes/project-repos";
+import { sandboxRoutes } from "./routes/sandboxes";
+import { k8sClusterRoutes } from "./routes/k8s-clusters";
+import { domainRoutes } from "./routes/domains";
+import { toolDefinitionRoutes } from "./routes/tool-definitions";
 import { wsRoutes, broadcastToWs } from "./routes/ws";
 import { startEventSubscriber } from "./services/event-subscriber";
 
@@ -39,6 +46,13 @@ const app = new Elysia()
   .use(agentRunRoutes(db))
   .use(imageRoutes(db))
   .use(previewDeploymentRoutes(db))
+  .use(connectorRoutes(db))
+  .use(repositoryRoutes(db))
+  .use(projectRepoRoutes(db))
+  .use(sandboxRoutes(db))
+  .use(k8sClusterRoutes(db))
+  .use(domainRoutes(db))
+  .use(toolDefinitionRoutes(db))
   .use(wsRoutes())
   .listen(3434);
 

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { Db } from "@assembly-lime/shared/db";
 import {
   tenants,
@@ -7,8 +7,11 @@ import {
   userRoles,
   projects,
   boards,
+  connectors,
+  repositories,
 } from "@assembly-lime/shared/db/schema";
 import type { GitHubUser } from "../lib/github-oauth";
+import { encryptToken } from "../lib/encryption";
 import { childLogger } from "../lib/logger";
 
 const log = childLogger({ module: "auth-service" });
@@ -27,6 +30,7 @@ const SEED_ROLES = ["admin", "pm", "dev", "qa"];
 export async function findOrCreateUserFromGitHub(
   db: Db,
   ghUser: GitHubUser,
+  accessToken: string,
 ): Promise<{ userId: number; tenantId: number }> {
   // 1. Lookup by githubUserId
   const existing = await db.query.users.findFirst({
@@ -43,6 +47,11 @@ export async function findOrCreateUserFromGitHub(
         githubLogin: ghUser.login,
       })
       .where(eq(users.id, existing.id));
+
+    // Auto-sync connector + repos (fire-and-forget)
+    ensureConnectorAndSyncRepos(db, existing.tenantId, accessToken).catch((err) =>
+      log.error({ err, tenantId: existing.tenantId }, "background repo sync failed")
+    );
 
     return { userId: existing.id, tenantId: existing.tenantId };
   }
@@ -98,7 +107,104 @@ export async function findOrCreateUserFromGitHub(
     columnsJson: DEFAULT_COLUMNS,
   });
 
+  // Auto-create connector + sync repos (fire-and-forget)
+  ensureConnectorAndSyncRepos(db, tenantId, accessToken).catch((err) =>
+    log.error({ err, tenantId }, "background repo sync failed")
+  );
+
   return { userId, tenantId };
+}
+
+// ── Auto-create connector + sync repos on login ─────────────────────
+
+const GITHUB_API = "https://api.github.com";
+
+async function ensureConnectorAndSyncRepos(
+  db: Db,
+  tenantId: number,
+  accessToken: string,
+) {
+  // 1. Check for existing active connector for this tenant
+  const existing = await db
+    .select()
+    .from(connectors)
+    .where(and(eq(connectors.tenantId, tenantId), eq(connectors.status, 1)))
+    .limit(1);
+
+  let connectorId: number;
+  const accessTokenEnc = encryptToken(accessToken);
+
+  if (existing.length > 0) {
+    // Update the token on the existing connector (OAuth tokens refresh on each login)
+    connectorId = existing[0]!.id;
+    await db
+      .update(connectors)
+      .set({ accessTokenEnc })
+      .where(eq(connectors.id, connectorId));
+    log.info({ connectorId, tenantId }, "updated existing connector token");
+  } else {
+    // Create a new connector
+    const [row] = await db
+      .insert(connectors)
+      .values({
+        tenantId,
+        provider: 1, // github
+        externalOrg: null, // personal repos via /user/repos
+        authType: 1, // oauth
+        accessTokenEnc,
+        scopesJson: ["repo", "read:user"],
+        status: 1,
+      })
+      .returning();
+    connectorId = row!.id;
+    log.info({ connectorId, tenantId }, "auto-created connector from OAuth");
+  }
+
+  // 2. Fetch repos from GitHub
+  const res = await fetch(`${GITHUB_API}/user/repos?per_page=100&sort=updated`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
+  });
+
+  if (!res.ok) {
+    log.warn({ status: res.status, tenantId }, "failed to fetch repos from GitHub");
+    return;
+  }
+
+  const ghRepos = (await res.json()) as Array<{
+    id: number;
+    name: string;
+    full_name: string;
+    clone_url: string;
+    default_branch: string;
+    owner: { login: string };
+  }>;
+
+  // 3. Import repos (upsert — skip duplicates)
+  let imported = 0;
+  for (const r of ghRepos) {
+    const [row] = await db
+      .insert(repositories)
+      .values({
+        tenantId,
+        connectorId,
+        provider: 1,
+        externalRepoId: r.id,
+        owner: r.owner.login,
+        name: r.name,
+        fullName: r.full_name,
+        cloneUrl: r.clone_url,
+        defaultBranch: r.default_branch,
+      })
+      .onConflictDoNothing()
+      .returning();
+    if (row) imported++;
+  }
+
+  log.info({ tenantId, connectorId, total: ghRepos.length, imported }, "auto-synced repos from GitHub");
 }
 
 export type MeResponse = {

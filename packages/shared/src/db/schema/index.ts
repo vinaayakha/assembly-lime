@@ -13,3 +13,6 @@ export * from "./budgets";
 export * from "./audit";
 export * from "./images";
 export * from "./preview-deployments";
+export * from "./k8s";
+export * from "./repository-configs";
+export * from "./tool-definitions";

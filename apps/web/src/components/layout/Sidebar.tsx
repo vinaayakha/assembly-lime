@@ -1,5 +1,15 @@
 import { NavLink } from "react-router-dom";
-import { Terminal, LayoutDashboard, Play, ChevronsUpDown } from "lucide-react";
+import {
+  Terminal,
+  LayoutDashboard,
+  Play,
+  ChevronsUpDown,
+  GitBranch,
+  Plug,
+  Server,
+  Box,
+  Globe,
+} from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -7,6 +17,11 @@ const NAV_ITEMS = [
   { to: "/command-center", label: "Command Center", icon: Terminal },
   { to: "/board", label: "Board", icon: LayoutDashboard },
   { to: "/runs", label: "Agent Runs", icon: Play },
+  { to: "/repos", label: "Repositories", icon: GitBranch },
+  { to: "/connectors", label: "Connectors", icon: Plug },
+  { to: "/clusters", label: "K8s Clusters", icon: Server },
+  { to: "/sandboxes", label: "Sandboxes", icon: Box },
+  { to: "/domains", label: "Domains", icon: Globe },
 ] as const;
 
 export function Sidebar() {

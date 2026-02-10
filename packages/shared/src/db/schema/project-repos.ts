@@ -27,6 +27,8 @@ export const projectRepositories = pgTable(
       .references(() => repositories.id),
     repoRole: smallint("repo_role").notNull(),
     isPrimary: boolean("is_primary").notNull().default(false),
+    uatBranch: text("uat_branch"),
+    prodBranch: text("prod_branch"),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

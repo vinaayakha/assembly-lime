@@ -6,6 +6,12 @@ import { CommandCenterPage } from "./pages/CommandCenterPage";
 import { BoardPage } from "./pages/BoardPage";
 import { AgentRunsPage } from "./pages/AgentRunsPage";
 import { RunDetailPage } from "./pages/RunDetailPage";
+import { ReposPage } from "./pages/ReposPage";
+import { RepoDetailPage } from "./pages/RepoDetailPage";
+import { ConnectorsPage } from "./pages/ConnectorsPage";
+import { ClustersPage } from "./pages/ClustersPage";
+import { SandboxesPage } from "./pages/SandboxesPage";
+import { DomainsPage } from "./pages/DomainsPage";
 
 function App() {
   return (
@@ -23,6 +29,12 @@ function App() {
         <Route path="board" element={<BoardPage />} />
         <Route path="runs" element={<AgentRunsPage />} />
         <Route path="runs/:id" element={<RunDetailPage />} />
+        <Route path="repos" element={<ReposPage />} />
+        <Route path="repos/:id" element={<RepoDetailPage />} />
+        <Route path="connectors" element={<ConnectorsPage />} />
+        <Route path="clusters" element={<ClustersPage />} />
+        <Route path="sandboxes" element={<SandboxesPage />} />
+        <Route path="domains" element={<DomainsPage />} />
       </Route>
     </Routes>
   );

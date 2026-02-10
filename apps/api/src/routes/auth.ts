@@ -89,10 +89,11 @@ export function authRoutes(db: Db) {
         const ghUser = await fetchGitHubUser(accessToken);
         log.info({ githubLogin: ghUser.login, githubId: ghUser.id }, "fetched GitHub user");
 
-        // Find or create user
+        // Find or create user (also auto-creates connector + syncs repos)
         const { userId, tenantId } = await findOrCreateUserFromGitHub(
           db,
           ghUser,
+          accessToken,
         );
         log.info({ userId, tenantId, githubLogin: ghUser.login }, "user authenticated");
 

@@ -6,6 +6,7 @@ import {
   jsonb,
   customType,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants";
 import { projects } from "./projects";
@@ -31,6 +32,10 @@ export const agentRuns = pgTable(
     outputSummary: text("output_summary"),
     artifactsJson: jsonb("artifacts_json").notNull().default({}),
     costCents: bigint("cost_cents", { mode: "number" }).notNull().default(0),
+    parentRunId: bigint("parent_run_id", { mode: "number" }).references(() => agentRuns.id, { onDelete: "set null" }),
+    orchestrationMode: text("orchestration_mode"),
+    totalTokensUsed: bigint("total_tokens_used", { mode: "number" }).default(0),
+    compactedAt: timestamp("compacted_at", { withTimezone: true }),
     startedAt: timestamp("started_at", { withTimezone: true }),
     endedAt: timestamp("ended_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -43,6 +48,7 @@ export const agentRuns = pgTable(
     ),
     index("agent_runs_tenant_status_idx").on(t.tenantId, t.status),
     index("agent_runs_tenant_provider_mode_idx").on(t.tenantId, t.provider, t.mode),
+    index("agent_runs_tenant_parent_idx").on(t.tenantId, t.parentRunId),
   ]
 );
 
@@ -62,6 +68,31 @@ export const agentEvents = pgTable(
   },
   (t) => [
     index("agent_events_tenant_run_ts_idx").on(t.tenantId, t.agentRunId, t.ts),
+  ]
+);
+
+export const agentRunRepos = pgTable(
+  "agent_run_repos",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
+    tenantId: bigint("tenant_id", { mode: "number" })
+      .notNull()
+      .references(() => tenants.id),
+    agentRunId: bigint("agent_run_id", { mode: "number" })
+      .notNull()
+      .references(() => agentRuns.id, { onDelete: "cascade" }),
+    repositoryId: bigint("repository_id", { mode: "number" })
+      .notNull()
+      .references(() => repositories.id),
+    branch: text("branch").notNull(),
+    status: text("status").notNull().default("pending"),
+    diffSummary: text("diff_summary"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("agent_run_repos_run_repo_uniq").on(t.agentRunId, t.repositoryId),
+    index("agent_run_repos_tenant_run_idx").on(t.tenantId, t.agentRunId),
+    index("agent_run_repos_tenant_repo_idx").on(t.tenantId, t.repositoryId),
   ]
 );
 

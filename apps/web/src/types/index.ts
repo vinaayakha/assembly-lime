@@ -150,3 +150,67 @@ export type Ticket = {
   prUrl?: string;
   assignee?: string;
 };
+
+// ── Repository types ────────────────────────────────────────────────
+
+export type Repository = {
+  id: string;
+  tenantId: string;
+  connectorId: string;
+  fullName: string;
+  cloneUrl: string;
+  defaultBranch: string;
+  isEnabled: boolean;
+  createdAt: string;
+};
+
+export type FileTreeEntry = {
+  path: string;
+  type: "file" | "dir";
+  size?: number;
+  children?: FileTreeEntry[];
+};
+
+export type RepoConfig = {
+  id: string;
+  repositoryId: string;
+  filePath: string;
+  configType: string;
+  detectedKeys: string[];
+  createdAt: string;
+};
+
+// ── K8s types ───────────────────────────────────────────────────────
+
+export type K8sCluster = {
+  id: string;
+  tenantId: string;
+  name: string;
+  apiUrl: string;
+  status: string;
+  metadataJson: unknown;
+  lastSyncedAt: string | null;
+  createdAt: string;
+};
+
+export type Sandbox = {
+  id: string;
+  tenantId: string;
+  clusterId: string;
+  repositoryId: string;
+  branch: string;
+  k8sPod: string;
+  status: string;
+  portsJson: unknown;
+  createdAt: string;
+};
+
+export type Domain = {
+  id: string;
+  tenantId: string;
+  clusterId: string;
+  domain: string;
+  status: string;
+  tlsCertSecret: string | null;
+  createdAt: string;
+};

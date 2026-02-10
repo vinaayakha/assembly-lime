@@ -7,6 +7,7 @@ import { redis, createPublisher } from "./lib/redis";
 import { logger } from "./lib/logger";
 import { AgentEventEmitter } from "./agent/event-emitter";
 import { runClaudeAgent } from "./agent/claude-runner";
+import { runClaudeAgentMultiRepo } from "./agent/multi-repo-runner";
 import { launchK8sJob } from "./k8s/job-launcher";
 
 const USE_K8S_SANDBOX = process.env.USE_K8S_SANDBOX === "true";
@@ -51,7 +52,11 @@ const worker = new Worker<AgentJobPayload>(
     await pub.connect();
     const emitter = new AgentEventEmitter(pub, payload.runId);
     try {
-      await runClaudeAgent(payload, emitter);
+      if (payload.repos && payload.repos.length > 0) {
+        await runClaudeAgentMultiRepo(payload, emitter);
+      } else {
+        await runClaudeAgent(payload, emitter);
+      }
     } finally {
       await pub.quit();
     }

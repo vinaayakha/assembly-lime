@@ -61,6 +61,12 @@ export type AgentJobPayload = {
     ref?: string;
     allowedPaths?: string[];
   };
+  repos?: Array<{
+    repositoryId: number;
+    cloneUrl: string;
+    defaultBranch: string;
+    ref?: string;
+  }>;
   constraints?: {
     timeBudgetSec?: number;
     maxCostCents?: number;
@@ -81,6 +87,12 @@ export type AgentEvent =
       previewUrl: string;
       branch: string;
       status: PreviewDeploymentStatus;
+    }
+  | {
+      type: "compaction";
+      tokensBefore: number;
+      tokensAfter: number;
+      summary: string;
     };
 
 // ── Queue constants ──────────────────────────────────────────────────
